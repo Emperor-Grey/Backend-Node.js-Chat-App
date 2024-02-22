@@ -9,7 +9,13 @@ document.querySelector("#messageForm").addEventListener("submit", (e) => {
 
   const message = e.target.elements.message.value;
 
-  socket.emit("sendMessage", message);
+  socket.emit("sendMessage", message, (err) => {
+    if (err) {
+      return console.log(err);
+    }
+
+    console.log("Message Delivered");
+  });
 });
 
 document.querySelector("#sendLocation").addEventListener("click", () => {
@@ -18,9 +24,15 @@ document.querySelector("#sendLocation").addEventListener("click", () => {
   }
 
   navigator.geolocation.getCurrentPosition((position) => {
-    socket.emit("sendLocation", {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-    });
+    socket.emit(
+      "sendLocation",
+      {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      },
+      () => {
+        console.log("Location shared");
+      },
+    );
   });
 });
