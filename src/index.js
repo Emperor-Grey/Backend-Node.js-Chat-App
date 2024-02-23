@@ -7,7 +7,12 @@ const {
   generateMessage,
   generateLocationMessage,
 } = require("./utils/messages");
-const { addUser, removeUser, getUser } = require("./utils/users");
+const {
+  addUser,
+  removeUser,
+  getUser,
+  getUsersInRoom,
+} = require("./utils/users");
 
 const app = express();
 const server = http.createServer(app);
@@ -37,6 +42,11 @@ io.on("connection", (socket) => {
         "message",
         generateMessage("Admin", `A wild ${user.username} has joined!`),
       );
+
+    io.to(user.room).emit("roomData", {
+      room: user.room,
+      users: getUsersInRoom(user.room),
+    });
 
     callback();
   });
@@ -76,6 +86,11 @@ io.on("connection", (socket) => {
         "message",
         generateMessage("Admin", `Aww ${user.username} has Left`),
       );
+
+      io.to(user.room).emit("roomData", {
+        room: user.room,
+        users: getUsersInRoom(user.room),
+      });
     }
   });
 });

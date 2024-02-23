@@ -6,12 +6,14 @@ const $messageFormInput = document.querySelector("input");
 const $messageFormButton = document.querySelector("button");
 const $userLocation = document.querySelector("#sendLocation");
 const $messages = document.querySelector("#messages");
+const $sidebar = document.querySelector("#sidebar");
 
 //Templates
 const messageTemplates = document.querySelector("#messageTemplate").innerHTML;
 const locationMessageTemplate = document.querySelector(
   "#locationMessageTemplate",
 ).innerHTML;
+const sidebarTemplate = document.querySelector("#sidebarTemplate").innerHTML;
 
 // Options
 const { username, room } = Qs.parse(location.search, {
@@ -93,4 +95,13 @@ socket.emit("join", { username, room }, (error) => {
     alert(error);
     location.href = "/";
   }
+});
+
+socket.on("roomData", ({ room, users }) => {
+  const html = Mustache.render(sidebarTemplate, {
+    room,
+    users,
+  });
+
+  $sidebar.innerHTML = html;
 });
