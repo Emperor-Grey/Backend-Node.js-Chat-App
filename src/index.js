@@ -4,14 +4,14 @@ const path = require("path");
 const socket = require("socket.io");
 const Filter = require("bad-words");
 const {
-  generateMessage,
-  generateLocationMessage,
+    generateMessage,
+    generateLocationMessage,
 } = require("./utils/messages");
 const {
-  addUser,
-  removeUser,
-  getUser,
-  getUsersInRoom,
+    addUser,
+    removeUser,
+    getUser,
+    getUsersInRoom,
 } = require("./utils/users");
 
 const app = express();
@@ -24,77 +24,77 @@ const publicDirectoryPath = path.join(__dirname, "../public");
 app.use(express.static(publicDirectoryPath));
 
 io.on("connection", (socket) => {
-  console.log("New Websocket Connected");
+    console.log("New Websocket Connected");
 
-  socket.on("join", ({ username, room }, callback) => {
-    const { error, user } = addUser({ id: socket.id, username, room });
+    socket.on("join", ({username, room}, callback) => {
+        const {error, user} = addUser({id: socket.id, username, room});
 
-    if (error) {
-      return callback(error);
-    }
+        if (error) {
+            return callback(error);
+        }
 
-    socket.join(user.room);
+        socket.join(user.room);
 
-    socket.emit("message", generateMessage("Admin", "Welcome!!!"));
-    socket.broadcast
-      .to(user.room)
-      .emit(
-        "message",
-        generateMessage("Admin", `A wild ${user.username} has joined!`),
-      );
+        socket.emit("message", generateMessage("Admin", "Welcome!!!"));
+        socket.broadcast
+            .to(user.room)
+            .emit(
+                "message",
+                generateMessage("Admin", `A wild ${user.username} has joined!`),
+            );
 
-    io.to(user.room).emit("roomData", {
-      room: user.room,
-      users: getUsersInRoom(user.room),
+        io.to(user.room).emit("roomData", {
+            room: user.room,
+            users: getUsersInRoom(user.room),
+        });
+
+        callback();
     });
 
-    callback();
-  });
+    socket.on("sendMessage", (message, callback) => {
+        const filter = new Filter();
 
-  socket.on("sendMessage", (message, callback) => {
-    const filter = new Filter();
+        const user = getUser(socket.id);
 
-    const user = getUser(socket.id);
+        if (filter.isProfane(message)) {
+            return callback("Profanity is not allowed(Bad words used)");
+        }
 
-    if (filter.isProfane(message)) {
-      return callback("Profanity is not allowed(Bad words used)");
-    }
+        io.to(user.room).emit("message", generateMessage(user.username, message));
+        callback();
+    });
 
-    io.to(user.room).emit("message", generateMessage(user.username, message));
-    callback();
-  });
+    socket.on("sendLocation", ({latitude, longitude}, callback) => {
+        const user = getUser(socket.id);
 
-  socket.on("sendLocation", ({ latitude, longitude }, callback) => {
-    const user = getUser(socket.id);
+        io.to(user.room).emit(
+            "locationMessage",
+            generateLocationMessage(
+                user.username,
+                `https://google.com/maps?q=${latitude},${longitude}`,
+            ),
+        );
 
-    io.to(user.room).emit(
-      "locationMessage",
-      generateLocationMessage(
-        user.username,
-        `https://google.com/maps?q=${latitude},${longitude}`,
-      ),
-    );
+        callback();
+    });
 
-    callback();
-  });
+    socket.on("disconnect", () => {
+        const user = removeUser(socket.id);
 
-  socket.on("disconnect", () => {
-    const user = removeUser(socket.id);
+        if (user) {
+            io.to(user.room).emit(
+                "message",
+                generateMessage("Admin", `Aww ${user.username} has Left`),
+            );
 
-    if (user) {
-      io.to(user.room).emit(
-        "message",
-        generateMessage("Admin", `Aww ${user.username} has Left`),
-      );
-
-      io.to(user.room).emit("roomData", {
-        room: user.room,
-        users: getUsersInRoom(user.room),
-      });
-    }
-  });
+            io.to(user.room).emit("roomData", {
+                room: user.room,
+                users: getUsersInRoom(user.room),
+            });
+        }
+    });
 });
 
 server.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
